@@ -1,0 +1,2395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1600, height=900, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>无人船智能船坞控制系统 HMI</title>
+  <style>
+    :root {
+      --screen-w: 1600px;
+      --screen-h: 900px;
+      --bg-0: #050507;
+      --bg-1: #0a0a0f;
+      --bg-2: #111118;
+      --panel: rgba(8, 8, 14, .92);
+      --panel-2: rgba(6, 6, 10, .95);
+      --line: rgba(100, 120, 160, .15);
+      --line-strong: rgba(100, 120, 160, .30);
+      --text: #c8ccd4;
+      --muted: #606878;
+      --blue: #4a8ab5;
+      --cyan: #5090b8;
+      --green: #2aaa6a;
+      --yellow: #c8a848;
+      --orange: #cc7a3a;
+      --red: #c04050;
+      --purple: #7a60b8;
+      --shadow: rgba(0, 0, 0, .70);
+      --radius: 18px;
+      --font: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      min-width: var(--screen-w);
+      min-height: var(--screen-h);
+      background: #020204;
+      overflow: auto;
+      font-family: var(--font);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .screen {
+      position: relative;
+      width: var(--screen-w);
+      height: var(--screen-h);
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(60, 80, 120, .06), transparent 30%),
+        radial-gradient(circle at 78% 18%, rgba(60, 80, 120, .08), transparent 34%),
+        linear-gradient(135deg, var(--bg-0), var(--bg-1) 52%, #020204);
+      box-shadow: 0 28px 90px rgba(0,0,0,.85);
+    }
+
+    .screen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(80,100,140,.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(80,100,140,.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), rgba(0,0,0,.1));
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: absolute;
+      left: 24px;
+      top: 18px;
+      width: 1552px;
+      height: 78px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(10, 10, 16, .92), rgba(6, 6, 10, .95));
+      border-radius: 18px;
+      box-shadow: 0 18px 40px var(--shadow), inset 0 1px 0 rgba(255,255,255,.03);
+      display: grid;
+      grid-template-columns: 360px 1fr 480px;
+      align-items: center;
+      padding: 0 22px;
+      z-index: 2;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(80,100,140,.12), rgba(80,100,140,.04));
+      border: 1px solid var(--line-strong);
+      box-shadow: 0 0 16px rgba(80,100,140,.06);
+    }
+
+    .logo svg {
+      width: 30px;
+      height: 30px;
+      fill: none;
+      stroke: var(--cyan);
+      stroke-width: 2.4;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 25px;
+      letter-spacing: 1.8px;
+      font-weight: 700;
+    }
+
+    .title p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: .8px;
+    }
+
+    .mode-cluster {
+      justify-self: center;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mode-label {
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    .mode-btn {
+      width: 92px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(8, 8, 14, .8);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 700;
+      transition: .2s;
+    }
+
+    .mode-btn.active {
+      color: #020204;
+      background: linear-gradient(90deg, #5090b8, #3a7098);
+      border-color: transparent;
+      box-shadow: 0 0 14px rgba(80,100,140,.15);
+    }
+
+    .mode-btn:hover {
+      border-color: rgba(80,100,140,.35);
+      color: var(--text);
+      background: rgba(80,100,140,.08);
+      box-shadow: 0 0 10px rgba(80,100,140,.10);
+      transform: translateY(-1px);
+    }
+
+    .mode-btn.active:hover {
+      color: #020204;
+      background: linear-gradient(90deg, #60a8d0, #5090b8);
+      box-shadow: 0 0 20px rgba(80,100,140,.25);
+      transform: translateY(-1px);
+    }
+
+    .top-right {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .top-right .status-mini {
+      flex: 0 0 100px;
+      min-width: 0;
+    }
+
+    .user-avatar {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(80,100,140,.25);
+      background: linear-gradient(135deg, rgba(80,100,140,.10), rgba(80,100,140,.04));
+      display: grid;
+      place-items: center;
+      overflow: visible;
+      cursor: pointer;
+      transition: .3s ease;
+    }
+
+    .user-avatar:hover {
+      border-color: rgba(80,100,140,.6);
+      box-shadow: 0 0 14px rgba(80,100,140,.20), 0 0 28px rgba(80,100,140,.08);
+      transform: scale(1.12);
+    }
+
+    .user-avatar:hover svg {
+      stroke: #ddd;
+      filter: drop-shadow(0 0 4px rgba(80,100,140,.3));
+    }
+
+    .user-avatar:hover .badge-dot {
+      transform: scale(1.15);
+      box-shadow: 0 0 10px rgba(192,64,80,.6);
+    }
+
+    .user-avatar svg {
+      width: 26px;
+      height: 26px;
+      fill: none;
+      stroke: var(--cyan);
+      stroke-width: 1.8;
+      transition: .3s ease;
+    }
+
+    .user-avatar .badge-dot {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--red);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 6px rgba(192,64,80,.4);
+      border: 1.5px solid #0a0a0f;
+      transition: .3s ease;
+    }
+
+    .status-mini {
+      min-width: 0;
+      height: 44px;
+      border-radius: 14px;
+      background: rgba(8, 8, 14, .82);
+      border: 1px solid rgba(80,100,140,.12);
+      padding: 7px 10px;
+      overflow: hidden;
+    }
+
+    .status-mini span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 12px;
+    }
+
+    .status-mini b {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 5px;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      background: var(--green);
+    }
+
+    .dot.red { background: var(--red); }
+    .dot.yellow { background: var(--yellow); }
+    .dot.blue { background: var(--blue); }
+
+    .layout {
+      position: absolute;
+      left: 24px;
+      top: 112px;
+      width: 1552px;
+      height: 764px;
+      display: grid;
+      grid-template-columns: 224px 1fr 320px;
+      gap: 18px;
+      z-index: 1;
+    }
+
+    .sidebar {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(8, 8, 14, .94), rgba(4, 4, 8, .96));
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 18px 45px var(--shadow);
+    }
+
+    .nav-title {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 2px;
+      margin: 4px 0 14px 8px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      height: 48px;
+      margin-bottom: 10px;
+      border-radius: 15px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #808898;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 13px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: .2s;
+      text-align: left;
+    }
+
+    .nav-ico {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      color: var(--cyan);
+      background: rgba(80,100,140,.05);
+      border: 1px solid rgba(80,100,140,.10);
+      font-size: 14px;
+    }
+
+    .nav-btn.active {
+      background: linear-gradient(90deg, rgba(80,100,140,.12), rgba(80,100,140,.04));
+      border-color: rgba(80,100,140,.22);
+      color: #d0d4dc;
+      box-shadow: inset 3px 0 0 var(--cyan);
+    }
+
+    .nav-btn:hover {
+      border-color: rgba(80,100,140,.14);
+      background: rgba(80,100,140,.04);
+    }
+
+    .emergency {
+      position: absolute;
+      left: 16px;
+      bottom: 18px;
+      width: 192px;
+      height: 68px;
+      border: 1px solid rgba(192,64,80,.40);
+      border-radius: 18px;
+      color: #ddd;
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(192,64,80,.80), rgba(100,16,30,.80));
+      box-shadow: 0 0 16px rgba(192,64,80,.10), inset 0 1px 0 rgba(255,255,255,.10);
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 2px;
+    }
+
+    .main {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(6, 6, 10, .82);
+      border-radius: var(--radius);
+      box-shadow: 0 18px 45px var(--shadow);
+      padding: 18px;
+      position: relative;
+    }
+
+    .page {
+      display: none;
+      height: 100%;
+      animation: fade .25s ease;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes fade {
+      from { opacity: .4; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-head {
+      height: 54px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .page-head h2 {
+      margin: 0;
+      font-size: 23px;
+      letter-spacing: 1.2px;
+    }
+
+    .page-head p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .page-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .action {
+      height: 38px;
+      padding: 0 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      color: #a0a8b8;
+      background: rgba(8, 8, 14, .85);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .action.primary {
+      background: linear-gradient(90deg, rgba(80,100,140,.70), rgba(80,100,140,.55));
+      color: #020204;
+      border: none;
+    }
+
+    .action.warn {
+      background: rgba(200,168,72,.10);
+      border-color: rgba(200,168,72,.35);
+      color: #c8a848;
+    }
+
+    .action.danger {
+      background: rgba(192,64,80,.10);
+      border-color: rgba(192,64,80,.35);
+      color: #c04050;
+    }
+
+    .action:hover {
+      background: rgba(80,100,140,.10);
+      border-color: rgba(80,100,140,.40);
+      color: #ddd;
+      box-shadow: 0 0 12px rgba(80,100,140,.12);
+      transform: translateY(-1px);
+    }
+
+    .action.primary:hover {
+      background: linear-gradient(90deg, #60a8d0, #5090b8);
+      color: #020204;
+      box-shadow: 0 0 20px rgba(80,100,140,.25);
+      transform: translateY(-1px);
+    }
+
+    .action.warn:hover {
+      background: rgba(200,168,72,.18);
+      border-color: rgba(200,168,72,.55);
+      color: #d4b860;
+      box-shadow: 0 0 12px rgba(200,168,72,.15);
+      transform: translateY(-1px);
+    }
+
+    .action.danger:hover {
+      background: rgba(192,64,80,.18);
+      border-color: rgba(192,64,80,.55);
+      color: #d06070;
+      box-shadow: 0 0 12px rgba(192,64,80,.15);
+      transform: translateY(-1px);
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .grid-main-overview {
+      display: grid;
+      grid-template-columns: 1.03fr 1.24fr;
+      grid-template-rows: 166px 136px 1fr;
+      gap: 14px;
+      height: calc(100% - 68px);
+    }
+
+    .card {
+      position: relative;
+      border: 1px solid rgba(80,100,140,.12);
+      background: linear-gradient(180deg, rgba(10,10,16,.88), rgba(6,6,12,.92));
+      border-radius: 18px;
+      padding: 16px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(90deg, transparent, rgba(80,100,140,.30), transparent);
+    }
+
+    .card-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 13px;
+    }
+
+    .card-title h3 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: .8px;
+    }
+
+    .tag {
+      height: 24px;
+      line-height: 22px;
+      padding: 0 9px;
+      border: 1px solid rgba(80,100,140,.20);
+      border-radius: 999px;
+      color: var(--cyan);
+      background: rgba(80,100,140,.05);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .tag.green { color: var(--green); border-color: rgba(42,170,106,.20); background: rgba(42,170,106,.05); }
+    .tag.yellow { color: var(--yellow); border-color: rgba(200,168,72,.22); background: rgba(200,168,72,.05); }
+    .tag.red { color: var(--red); border-color: rgba(192,64,80,.22); background: rgba(192,64,80,.05); }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .metric {
+      min-height: 86px;
+      border: 1px solid rgba(80,100,140,.10);
+      background: rgba(6, 6, 12, .55);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      margin-bottom: 11px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 27px;
+      line-height: 28px;
+      color: #c0c4cc;
+    }
+
+    .metric small {
+      margin-left: 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .dock-visual {
+      grid-row: span 2;
+      padding: 14px 18px 18px;
+    }
+
+    .dock-scene {
+      position: relative;
+      height: 150px;
+      margin-top: 2px;
+      border-radius: 18px;
+      border: 1px solid rgba(80,100,140,.10);
+      background:
+        linear-gradient(180deg, rgba(80,100,140,.03), transparent 50%),
+        radial-gradient(circle at 50% 70%, rgba(80,100,140,.08), transparent 42%),
+        rgba(4, 4, 8, .65);
+      overflow: hidden;
+    }
+
+    .water {
+      position: absolute;
+      left: -50px;
+      right: -50px;
+      bottom: 0;
+      height: 46px;
+      background:
+        repeating-linear-gradient(-6deg, rgba(80,100,140,.10) 0 12px, transparent 12px 26px),
+        linear-gradient(180deg, rgba(80,100,140,.04), rgba(80,100,140,.12));
+      opacity: .80;
+    }
+
+    .dock-frame {
+      position: absolute;
+      left: 158px;
+      top: 20px;
+      width: 344px;
+      height: 110px;
+      border: 3px solid rgba(80,100,140,.30);
+      border-bottom: none;
+      border-radius: 24px 24px 8px 8px;
+      box-shadow: 0 0 16px rgba(80,100,140,.08), inset 0 0 24px rgba(80,100,140,.04);
+    }
+
+    .dock-frame::before,
+    .dock-frame::after {
+      content: "";
+      position: absolute;
+      width: 22px;
+      height: 90px;
+      top: 10px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(80,100,140,.30), rgba(80,100,140,.06));
+    }
+
+    .dock-frame::before { left: 28px; }
+    .dock-frame::after { right: 28px; }
+
+    .ship {
+      position: absolute;
+      left: 236px;
+      top: 72px;
+      width: 190px;
+      height: 56px;
+      border-radius: 46% 46% 42% 42% / 70% 70% 36% 36%;
+      background: linear-gradient(180deg, #8a9098, #5090b8 55%, #2a5a78 56%);
+      border: 1px solid rgba(255,255,255,.20);
+      box-shadow: 0 0 18px rgba(80,100,140,.20);
+      transform: perspective(320px) rotateX(7deg);
+    }
+
+    .ship::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -12px;
+      transform: translateX(-50%);
+      width: 84px;
+      height: 24px;
+      border-radius: 18px 18px 8px 8px;
+      background: linear-gradient(180deg, #a0a4ac, #688098);
+      border: 1px solid rgba(255,255,255,.20);
+    }
+
+    .lock-arm {
+      position: absolute;
+      width: 88px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(42,170,106,.25);
+      top: 92px;
+    }
+
+    .lock-arm.left {
+      left: 164px;
+      transform: rotate(21deg);
+    }
+
+    .lock-arm.right {
+      right: 168px;
+      transform: rotate(-21deg);
+    }
+
+    .sensor {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px rgba(80,144,184,.50);
+    }
+
+    .sensor.s1 { left: 176px; top: 32px; }
+    .sensor.s2 { right: 176px; top: 32px; }
+    .sensor.s3 { left: 316px; bottom: 36px; }
+
+    .camera-feed {
+      height: 80px;
+      margin-top: 8px;
+      border: 1px solid rgba(80,100,140,.12);
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      background:
+        linear-gradient(145deg, rgba(80,100,140,.05), transparent 50%),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.015) 0 1px, transparent 1px 12px),
+        #050507;
+    }
+
+    .camera-feed::after {
+      content: "CAM-01  实时监控画面";
+      position: absolute;
+      left: 12px;
+      top: 10px;
+      color: #8098b0;
+      font-size: 12px;
+      background: rgba(0,0,0,.45);
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+
+    .crosshair {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 108px;
+      height: 68px;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(80,100,140,.35);
+      border-radius: 10px;
+    }
+
+    .crosshair::before,
+    .crosshair::after {
+      content: "";
+      position: absolute;
+      background: rgba(80,100,140,.35);
+    }
+
+    .crosshair::before {
+      width: 1px;
+      height: 38px;
+      left: 50%;
+      top: 15px;
+    }
+
+    .crosshair::after {
+      height: 1px;
+      width: 60px;
+      left: 24px;
+      top: 50%;
+    }
+
+    .process-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 0 4px;
+    }
+
+    .step {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: calc(50% + 17px);
+      top: 19px;
+      width: calc(100% - 30px);
+      height: 2px;
+      background: rgba(80,100,140,.15);
+    }
+
+    .step.done:not(:last-child)::after {
+      background: linear-gradient(90deg, var(--green), rgba(80,100,140,.18));
+    }
+
+    .step.current:not(:last-child)::after {
+      background: linear-gradient(90deg, var(--cyan), rgba(80,100,140,.20));
+    }
+
+    .step-dot {
+      margin: 0 auto 5px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      border: 1px solid rgba(80,100,140,.18);
+      background: rgba(6, 6, 12, .80);
+      font-weight: 800;
+      font-size: 13px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step.done .step-dot {
+      color: #050507;
+      background: var(--green);
+      border-color: transparent;
+      box-shadow: 0 0 12px rgba(42,170,106,.25);
+    }
+
+    .step.current .step-dot {
+      color: #050507;
+      background: var(--cyan);
+      border-color: transparent;
+      box-shadow: 0 0 12px rgba(80,144,184,.30);
+    }
+
+    .step span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .step.done span,
+    .step.current span {
+      color: #b0b8c4;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      row-gap: 8px;
+      font-size: 13px;
+    }
+
+    .kv .k {
+      color: var(--muted);
+    }
+
+    .kv .v {
+      color: #a8b0bc;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar {
+      width: 100%;
+      height: 9px;
+      background: rgba(255,255,255,.04);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      box-shadow: 0 0 8px rgba(80,144,184,.18);
+    }
+
+    .right-panel {
+      display: grid;
+      grid-template-rows: 196px 1fr 184px;
+      gap: 14px;
+    }
+
+    .alarm-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .alarm-item {
+      border: 1px solid rgba(80,100,140,.10);
+      background: rgba(6, 6, 12, .55);
+      border-radius: 14px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 8px 1fr;
+      gap: 10px;
+    }
+
+    .alarm-level {
+      border-radius: 999px;
+      background: var(--yellow);
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .alarm-level.red { background: var(--red); }
+    .alarm-level.green { background: var(--green); }
+
+    .alarm-item b {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .alarm-item span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .command-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .cmd {
+      height: 44px;
+      border-radius: 13px;
+      border: 1px solid rgba(80,100,140,.18);
+      background: rgba(6, 6, 12, .88);
+      color: #a0a8b8;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .cmd:hover {
+      border-color: var(--cyan);
+      color: #d0d4dc;
+    }
+
+    .cmd.lock {
+      border-color: rgba(42,170,106,.20);
+      color: #80c8a0;
+    }
+
+    .cmd.warn {
+      border-color: rgba(200,168,72,.22);
+      color: #c8a848;
+    }
+
+    .cmd.danger {
+      border-color: rgba(192,64,80,.25);
+      color: #c04050;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .table th {
+      color: var(--muted);
+      font-weight: 500;
+      text-align: left;
+      height: 34px;
+      border-bottom: 1px solid rgba(80,100,140,.12);
+    }
+
+    .table td {
+      height: 38px;
+      border-bottom: 1px solid rgba(80,100,140,.08);
+      color: #a0a8b8;
+    }
+
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 18px;
+      min-width: 28px;
+      padding: 0 4px;
+      border-radius: 999px;
+      border: 1px solid rgba(80,100,140,.20);
+      color: var(--cyan);
+      background: rgba(80,100,140,.05);
+      font-size: 10px;
+      line-height: 18px;
+      white-space: nowrap;
+      text-align: center;
+      box-sizing: border-box;
+      letter-spacing: .3px;
+    }
+
+    .badge.green { border-color: rgba(42,170,106,.20); color: var(--green); background: rgba(42,170,106,.04); }
+    .badge.yellow { border-color: rgba(200,168,72,.20); color: var(--yellow); background: rgba(200,168,72,.04); }
+    .badge.red { border-color: rgba(192,64,80,.22); color: var(--red); background: rgba(192,64,80,.05); }
+
+    .page-grid-process {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+      height: calc(100% - 68px);
+    }
+
+    .state-machine {
+      height: 100%;
+      padding: 18px;
+    }
+
+    .flow-map {
+      border-radius: 18px;
+      border: 1px solid rgba(80,100,140,.10);
+      background: rgba(4, 4, 8, .50);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .flow-map svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .check {
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid rgba(80,100,140,.10);
+      background: rgba(6, 6, 12, .55);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .device-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      height: calc(100% - 68px);
+    }
+
+    .device-card {
+      min-height: 160px;
+    }
+
+    .device-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      font-size: 25px;
+      border: 1px solid rgba(80,100,140,.15);
+      background: rgba(80,100,140,.05);
+      margin-bottom: 12px;
+    }
+
+    .device-card h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+    }
+
+    .device-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .device-footer {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mini-btn {
+      height: 30px;
+      padding: 0 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(80,100,140,.15);
+      background: rgba(6, 6, 12, .60);
+      color: #8098b0;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .link-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      height: 210px;
+      margin-bottom: 14px;
+    }
+
+    .link-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .signal {
+      display: flex;
+      align-items: end;
+      gap: 5px;
+      height: 48px;
+      margin-top: 12px;
+    }
+
+    .signal i {
+      display: block;
+      width: 13px;
+      border-radius: 5px 5px 0 0;
+      background: linear-gradient(180deg, var(--cyan), rgba(80,144,184,.15));
+    }
+
+    .signal i:nth-child(1) { height: 16px; }
+    .signal i:nth-child(2) { height: 24px; }
+    .signal i:nth-child(3) { height: 34px; }
+    .signal i:nth-child(4) { height: 44px; }
+
+    .chart {
+      height: 210px;
+      border: 1px solid rgba(80,100,140,.10);
+      border-radius: 16px;
+      background: rgba(6, 6, 12, .50);
+      padding: 12px;
+    }
+
+    .chart svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .charge-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 230px 1fr;
+      gap: 14px;
+      height: calc(100% - 68px);
+    }
+
+    .gauge-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 145px;
+    }
+
+    .gauge {
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background:
+conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .gauge::after {
+      content: "";
+      position: absolute;
+      width: 126px;
+      height: 126px;
+      border-radius: 50%;
+      background: #050507;
+      border: 1px solid rgba(80,100,140,.12);
+    }
+
+    .gauge b {
+      position: relative;
+      z-index: 1;
+      font-size: 30px;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .log-item {
+      border-radius: 13px;
+      border: 1px solid rgba(80,100,140,.10);
+      background: rgba(6, 6, 12, .50);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 78px 62px 1fr;
+      gap: 12px;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .log-item time {
+      color: var(--muted);
+    }
+
+    .right-bottom-hint {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    .modal {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .65);
+      z-index: 20;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 440px;
+      border-radius: 22px;
+      border: 1px solid rgba(192,64,80,.35);
+      background: linear-gradient(180deg, rgba(24, 6, 12, .97), rgba(8, 4, 8, .97));
+      box-shadow: 0 30px 80px rgba(0,0,0,.80), 0 0 20px rgba(192,64,80,.10);
+      padding: 26px;
+      text-align: center;
+    }
+
+    .modal-box h3 {
+      margin: 0 0 10px;
+      color: #d0d4dc;
+      font-size: 28px;
+      letter-spacing: 2px;
+    }
+
+    .modal-box p {
+      margin: 0 0 22px;
+      color: #90888c;
+      line-height: 1.7;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .dock-data-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .dock-data-item {
+      text-align: center;
+      padding: 6px 4px;
+      border: 1px solid rgba(80,100,140,.12);
+      background: rgba(6, 6, 12, .62);
+      border-radius: 10px;
+    }
+
+    .dock-data-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
+    .dock-data-item strong {
+      display: block;
+      color: #b0b4bc;
+      font-size: 15px;
+      line-height: 1.1;
+    }
+
+    .dock-data-item small {
+      font-size: 10px;
+      color: var(--muted);
+      margin-left: 2px;
+    }
+
+    /* ===== 网络监控 ===== */
+    .cam-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .cam-card {
+      border-radius: 16px;
+      border: 1px solid rgba(80,100,140,.12);
+      background: rgba(6, 6, 12, .58);
+      overflow: hidden;
+      cursor: pointer;
+      transition: .22s;
+    }
+
+    .cam-card:hover {
+      border-color: rgba(80,100,140,.30);
+      box-shadow: 0 0 14px rgba(80,100,140,.10);
+      transform: translateY(-2px);
+    }
+
+    .cam-card.cam-offline {
+      opacity: .45;
+      cursor: default;
+    }
+
+    .cam-card.cam-offline:hover {
+      border-color: rgba(80,100,140,.12);
+      box-shadow: none;
+      transform: none;
+    }
+
+    .cam-preview {
+      position: relative;
+      width: 100%;
+      height: 110px;
+      background:
+        linear-gradient(145deg, rgba(80,100,140,.04), transparent 50%),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 1px, transparent 1px 10px),
+        #050507;
+      display: grid;
+      place-items: center;
+    }
+
+    .cam-preview .cam-crosshair {
+      width: 64px;
+      height: 40px;
+      border: 1px solid rgba(80,100,140,.22);
+      border-radius: 6px;
+    }
+
+    .cam-preview .cam-label {
+      position: absolute;
+      left: 8px;
+      top: 6px;
+      font-size: 10px;
+      color: #607888;
+      background: rgba(0,0,0,.50);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .cam-preview .cam-dot {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .cam-info {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cam-info b {
+      font-size: 13px;
+      color: #a0a8b4;
+    }
+
+    .cam-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 15;
+      display: none;
+      background: rgba(0,0,0,.85);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cam-overlay.show {
+      display: flex;
+    }
+
+    .cam-fullview {
+      position: relative;
+      width: calc(100% - 80px);
+      height: calc(100% - 60px);
+      border-radius: 18px;
+      border: 1px solid rgba(80,100,140,.22);
+      background:
+        linear-gradient(145deg, rgba(80,100,140,.04), transparent 50%),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.015) 0 1px, transparent 1px 14px),
+        #050507;
+      box-shadow: 0 0 36px rgba(80,100,140,.08);
+      display: grid;
+      place-items: center;
+    }
+
+    .cam-fullview .cam-crosshair-big {
+      width: 180px;
+      height: 110px;
+      border: 1px solid rgba(80,100,140,.35);
+      border-radius: 10px;
+    }
+
+    .cam-fullview .cam-crosshair-big::before,
+    .cam-fullview .cam-crosshair-big::after {
+      content: "";
+      position: absolute;
+      background: rgba(80,100,140,.25);
+    }
+
+    .cam-fullview-label {
+      position: absolute;
+      left: 16px;
+      top: 14px;
+      color: #8098b0;
+      font-size: 14px;
+      background: rgba(0,0,0,.50);
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+
+    .cam-close {
+      position: absolute;
+      top: -16px;
+      right: -16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(192,64,80,.35);
+      background: rgba(192,64,80,.70);
+      color: #ddd;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      line-height: 1;
+      box-shadow: 0 0 10px rgba(192,64,80,.18);
+    }
+
+    .cam-close:hover {
+      background: var(--red);
+      box-shadow: 0 0 16px rgba(192,64,80,.30);
+    }
+
+    .start-sys-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      left: -95px;
+      height: 44px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(42,170,106,.30);
+      background: rgba(42,170,106,.08);
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      z-index: 5;
+    }
+
+    .start-sys-btn:hover {
+      background: rgba(42,170,106,.15);
+      box-shadow: 0 0 8px rgba(42,170,106,.15);
+    }
+
+    .start-sys-btn .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(42,170,106,.2);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen" id="screen">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32">
+            <path d="M4 21c4 3 20 3 24 0" />
+            <path d="M8 18l3-8h10l3 8" />
+            <path d="M12 10l4-5 4 5" />
+            <path d="M6 25c3 2 17 2 20 0" />
+          </svg>
+        </div>
+        <div class="title">
+          <h1>无人船智能船坞控制系统</h1>
+          <p>开发版 Ver.0.0.1</p>
+        </div>
+      </div>
+
+      <div class="mode-cluster">
+        <span class="mode-label">控制模式</span>
+        <button class="mode-btn">本地手动</button>
+        <button class="mode-btn active">全自动</button>
+        <button class="mode-btn">远程控制</button>
+      </div>
+
+        <div class="top-right">
+          <button class="start-sys-btn" id="startSysBtn" style="display:none;">启动系统</button>
+          <div class="status-mini">
+            <span>系统状态</span>
+            <b id="sysStatusB"><i class="dot" id="sysStatusDot"></i><span id="sysStatusText">运行正常</span></b>
+          </div>
+          <div class="status-mini">
+            <span>云端连接</span>
+            <b><i class="dot blue"></i>在线 / 42ms</b>
+          </div>
+          <div class="status-mini">
+            <span>安全联锁</span>
+            <b><i class="dot"></i>允许自动</b>
+          </div>
+          <div class="user-avatar">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+            <span class="badge-dot">3</span>
+          </div>
+        </div>
+    </header>
+
+    <section class="layout">
+      <aside class="sidebar">
+        <div class="nav-title">功能菜单</div>
+        <button class="nav-btn active" data-page="overview"><span class="nav-ico">总</span>总览界面</button>
+        <button class="nav-btn" data-page="process"><span class="nav-ico">流</span>流程监控</button>
+        <button class="nav-btn" data-page="device"><span class="nav-ico">设</span>设备状态</button>
+        <button class="nav-btn" data-page="comm"><span class="nav-ico">通</span>通信状态</button>
+        <button class="nav-btn" data-page="netmon"><span class="nav-ico">监</span>网络监控</button>
+        <button class="nav-btn" data-page="charge"><span class="nav-ico">充</span>充电数据</button>
+        <button class="nav-btn" data-page="fault"><span class="nav-ico">障</span>故障诊断</button>
+        <button class="nav-btn" data-page="ota"><span class="nav-ico">升</span>固件升级</button>
+        <button class="nav-btn" data-page="log"><span class="nav-ico">志</span>日志记录</button>
+        <button class="emergency" id="emergencyBtn">应急停机</button>
+      </aside>
+
+      <main class="main">
+        <section class="page active" id="overview">
+          <div class="page-head">
+            <div>
+              <h2>系统总览</h2>
+              <p>集中展示当前模式、流程阶段、安全状态、无人船、船坞、云端与关键执行机构。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action primary">启动自动进坞</button>
+              <button class="action warn">暂停流程</button>
+              <button class="action danger">终止任务</button>
+            </div>
+          </div>
+
+          <div class="grid-main-overview">
+            <div class="card">
+              <div class="card-title">
+                <h3>关键状态</h3>
+                <span class="tag green">任务 ID：DK-20260520-001</span>
+              </div>
+              <div class="metric-row">
+                <div class="metric"><span>当前阶段</span><strong>充电中</strong></div>
+<div class="metric"><span>无人船电量</span><strong>30<small>%</small></strong></div>
+                <div class="metric"><span>充电功率</span><strong>3.6<small>kW</small></strong></div>
+              </div>
+            </div>
+
+            <div class="card dock-visual">
+              <div class="card-title" style="margin-bottom:6px;">
+                <h3>船坞实时态势</h3>
+                <span class="tag green">定位完成 · 已锁紧</span>
+              </div>
+              <div class="dock-scene">
+                <div class="dock-frame"></div>
+                <div class="ship"></div>
+                <div class="lock-arm left"></div>
+                <div class="lock-arm right"></div>
+                <span class="sensor s1"></span>
+                <span class="sensor s2"></span>
+                <span class="sensor s3"></span>
+                <div class="water"></div>
+              </div>
+              <div class="dock-data-row">
+                <div class="dock-data-item"><span>锁紧力</span><strong>12.4<small>kN</small></strong></div>
+                <div class="dock-data-item"><span>平台高度</span><strong>1.82<small>m</small></strong></div>
+                <div class="dock-data-item"><span>环境温度</span><strong>26.3<small>℃</small></strong></div>
+                <div class="dock-data-item"><span>湿度</span><strong>62<small>%</small></strong></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <h3>自动流程进度</h3>
+                <span class="tag">6 / 8</span>
+              </div>
+              <div class="process-line">
+                <div class="step done"><div class="step-dot">1</div><span>进坞</span></div>
+                <div class="step done"><div class="step-dot">2</div><span>定位</span></div>
+                <div class="step done"><div class="step-dot">3</div><span>锁紧</span></div>
+                <div class="step done"><div class="step-dot">4</div><span>升降</span></div>
+                <div class="step current"><div class="step-dot">5</div><span>充电</span></div>
+                <div class="step"><div class="step-dot">6</div><span>出坞</span></div>
+                <div class="step"><div class="step-dot">7</div><span>完成</span></div>
+                <div class="step"><div class="step-dot">8</div><span>归档</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <h3>无人船状态</h3>
+                <span class="tag green">心跳正常</span>
+              </div>
+              <div class="kv">
+                <div class="k">在线状态</div><div class="v">在线，最近心跳 1.8 秒前</div>
+                <div class="k">位置偏差</div><div class="v">X +0.03m / Y -0.02m，满足定位阈值</div>
+                <div class="k">航向角</div><div class="v">184.2°，姿态稳定</div>
+                <div class="k">速度</div><div class="v">0.00 m/s</div>
+                <div class="k">进坞确认</div><div class="v">已确认接收，船端状态已同步</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <h3>安全联锁摘要</h3>
+                <span class="tag green">全部通过</span>
+              </div>
+              <div class="checklist">
+                <div class="check"><span>急停回路</span><span class="badge green">闭合正常</span></div>
+                <div class="check"><span>锁紧到位</span><span class="badge green">通过</span></div>
+                <div class="check"><span>升降平台限位</span><span class="badge green">安全</span></div>
+                <div class="check"><span>人员/障碍风险区</span><span class="badge green">无风险</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="process">
+          <div class="page-head">
+            <div>
+              <h2>流程监控</h2>
+              <p>进坞、定位、锁紧、升降、充电、出坞闭环状态机，包含前置条件、反馈、超时与异常出口。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action primary">启动进坞</button>
+              <button class="action">启动出坞</button>
+              <button class="action danger">终止流程</button>
+            </div>
+          </div>
+
+          <div class="page-grid-process">
+            <div class="card state-machine">
+              <div class="card-title">
+                <h3>流程状态机</h3>
+                <span class="tag">当前：充电中</span>
+              </div>
+              <div class="flow-map">
+                <svg viewBox="0 0 620 460" preserveAspectRatio="xMidYMid meet">
+                  <defs>
+                    <marker id="arrDone" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="#5090b8"/></marker>
+                    <marker id="arrActive" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="#60a8d0"/></marker>
+                    <marker id="arrIdle" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="rgba(80,100,140,.25)"/></marker>
+                    <marker id="arrRed" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="rgba(192,64,80,.35)"/></marker>
+                    <filter id="glow"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#5090b8" flood-opacity=".20"/></filter>
+                    <filter id="glowG"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#5090b8" flood-opacity=".20"/></filter>
+                  </defs>
+                  <!-- Arrows: done -->
+                  <line x1="162" y1="60" x2="244" y2="60" stroke="#5090b8" stroke-width="2" marker-end="url(#arrDone)"/>
+                  <line x1="374" y1="60" x2="458" y2="60" stroke="#5090b8" stroke-width="2" marker-end="url(#arrDone)"/>
+                  <line x1="523" y1="90" x2="523" y2="176" stroke="#5090b8" stroke-width="2" marker-end="url(#arrDone)"/>
+                  <line x1="458" y1="206" x2="374" y2="206" stroke="#5090b8" stroke-width="2" marker-end="url(#arrDone)"/>
+                  <!-- Arrow: active -->
+                  <line x1="244" y1="206" x2="162" y2="206" stroke="#60a8d0" stroke-width="2" marker-end="url(#arrActive)"/>
+                  <!-- Arrows: idle -->
+                  <line x1="97" y1="236" x2="97" y2="322" stroke="rgba(80,100,140,.25)" stroke-width="2" marker-end="url(#arrIdle)"/>
+                  <line x1="162" y1="352" x2="244" y2="352" stroke="rgba(80,100,140,.25)" stroke-width="2" marker-end="url(#arrIdle)"/>
+                  <line x1="374" y1="352" x2="458" y2="352" stroke="rgba(80,100,140,.25)" stroke-width="2" marker-end="url(#arrIdle)"/>
+                  <!-- Arrow: error -->
+                  <line x1="523" y1="90" x2="523" y2="322" stroke="rgba(192,64,80,.25)" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#arrRed)"/>
+                  <!-- Nodes: row 1 -->
+                  <g filter="url(#glowG)">
+                    <rect x="32" y="30" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="#5090b8" stroke-opacity=".35" stroke-width="1.5"/>
+                    <text x="97" y="55" text-anchor="middle" fill="#c8ccd4" font-size="14" font-weight="700">待机</text>
+                    <text x="97" y="74" text-anchor="middle" fill="#606878" font-size="11">安全状态</text>
+                  </g>
+                  <g filter="url(#glowG)">
+                    <rect x="244" y="30" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="#5090b8" stroke-opacity=".35" stroke-width="1.5"/>
+                    <text x="309" y="55" text-anchor="middle" fill="#c8ccd4" font-size="14" font-weight="700">进坞</text>
+                    <text x="309" y="74" text-anchor="middle" fill="#606878" font-size="11">船端确认</text>
+                  </g>
+                  <g filter="url(#glowG)">
+                    <rect x="458" y="30" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="#5090b8" stroke-opacity=".35" stroke-width="1.5"/>
+                    <text x="523" y="55" text-anchor="middle" fill="#c8ccd4" font-size="14" font-weight="700">定位</text>
+                    <text x="523" y="74" text-anchor="middle" fill="#606878" font-size="11">偏差校验</text>
+                  </g>
+                  <!-- Nodes: row 2 -->
+                  <g filter="url(#glowG)">
+                    <rect x="458" y="176" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="#5090b8" stroke-opacity=".35" stroke-width="1.5"/>
+                    <text x="523" y="201" text-anchor="middle" fill="#c8ccd4" font-size="14" font-weight="700">锁紧</text>
+                    <text x="523" y="220" text-anchor="middle" fill="#606878" font-size="11">双侧到位</text>
+                  </g>
+                  <g filter="url(#glowG)">
+                    <rect x="244" y="176" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="#5090b8" stroke-opacity=".35" stroke-width="1.5"/>
+                    <text x="309" y="201" text-anchor="middle" fill="#c8ccd4" font-size="14" font-weight="700">升降</text>
+                    <text x="309" y="220" text-anchor="middle" fill="#606878" font-size="11">限位正常</text>
+                  </g>
+                  <g filter="url(#glow)">
+                    <rect x="32" y="176" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="#60a8d0" stroke-opacity=".50" stroke-width="2"/>
+                    <text x="97" y="201" text-anchor="middle" fill="#d0d4dc" font-size="14" font-weight="700">充电</text>
+                    <text x="97" y="220" text-anchor="middle" fill="#606878" font-size="11">SOC 30%</text>
+                  </g>
+                  <!-- Nodes: row 3 -->
+                  <g>
+                    <rect x="32" y="322" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="rgba(80,100,140,.20)" stroke-width="1.5"/>
+                    <text x="97" y="347" text-anchor="middle" fill="#c8ccd4" font-size="14" font-weight="700">出坞</text>
+                    <text x="97" y="366" text-anchor="middle" fill="#606878" font-size="11">等待指令</text>
+                  </g>
+                  <g>
+                    <rect x="244" y="322" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="rgba(80,100,140,.20)" stroke-width="1.5"/>
+                    <text x="309" y="347" text-anchor="middle" fill="#c8ccd4" font-size="14" font-weight="700">完成</text>
+                    <text x="309" y="366" text-anchor="middle" fill="#606878" font-size="11">归档日志</text>
+                  </g>
+                  <g>
+                    <rect x="458" y="322" width="130" height="60" rx="16" fill="url(#nodeGrad)" stroke="rgba(192,64,80,.35)" stroke-width="1.5"/>
+                    <text x="523" y="347" text-anchor="middle" fill="#c8ccd4" font-size="14" font-weight="700">异常</text>
+                    <text x="523" y="366" text-anchor="middle" fill="#606878" font-size="11">安全出口</text>
+                  </g>
+                  <!-- Node gradient -->
+                  <defs>
+                    <linearGradient id="nodeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="rgba(14,14,20,.92)"/>
+                      <stop offset="100%" stop-color="rgba(8,8,14,.94)"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <h3>当前步骤条件</h3>
+                <span class="tag green">允许充电</span>
+              </div>
+              <div class="checklist">
+                <div class="check"><span>无人船已锁紧</span><span class="badge green">满足</span></div>
+                <div class="check"><span>升降平台到位</span><span class="badge green">满足</span></div>
+                <div class="check"><span>充电接口状态</span><span class="badge green">正常</span></div>
+                <div class="check"><span>电气保护检测</span><span class="badge green">通过</span></div>
+                <div class="check"><span>超时计时器</span><span class="badge">00:18:42</span></div>
+                <div class="check"><span>异常分支</span><span class="badge yellow">监控中</span></div>
+              </div>
+              <div class="card-title" style="margin-top:18px;">
+                <h3>步骤日志</h3>
+                <span class="tag">最近 4 条</span>
+              </div>
+              <div class="log-list">
+                <div class="log-item"><time>14:09:22</time><span class="badge green">完成</span><span>升降平台到位，允许进入充电阶段</span></div>
+                <div class="log-item"><time>14:09:28</time><span class="badge green">完成</span><span>充电接口闭合，电压建立正常</span></div>
+                <div class="log-item"><time>14:09:32</time><span class="badge">上报</span><span>任务阶段已同步至云端</span></div>
+                <div class="log-item"><time>14:10:02</time><span class="badge">心跳</span><span>船端状态确认：充电中</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="device">
+          <div class="page-head">
+            <div>
+              <h2>设备状态</h2>
+              <p>锁紧机构、升降机构、充电模块、传感器、急停、限位、I/O 等设备状态与手动控制入口。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action">刷新状态</button>
+              <button class="action warn">进入手动控制</button>
+              <button class="action">执行自检</button>
+            </div>
+          </div>
+
+          <div class="device-grid">
+            <div class="card device-card">
+              <div class="device-icon">🔒</div>
+              <h3>锁紧机构</h3>
+              <p>左/右锁紧臂均已到位；电机电流 1.2A；无卡滞。</p>
+              <div class="device-footer"><span class="badge green">已锁紧</span><button class="mini-btn">详情</button></div>
+            </div>
+            <div class="card device-card">
+              <div class="device-icon">↕</div>
+              <h3>升降平台</h3>
+              <p>平台位于充电高度；上/下限位正常；过载检测未触发。</p>
+              <div class="device-footer"><span class="badge green">到位</span><button class="mini-btn">手动</button></div>
+            </div>
+            <div class="card device-card">
+              <div class="device-icon">⚡</div>
+              <h3>充电模块</h3>
+              <p>电压 48.2V，电流 74.1A，功率 3.6kW，接口温度正常。</p>
+              <div class="device-footer"><span class="badge green">充电中</span><button class="mini-btn">停止</button></div>
+            </div>
+            <div class="card device-card">
+              <div class="device-icon">📡</div>
+              <h3>通信模块</h3>
+              <p>以太网主链路；4G/5G 备用在线；北斗短报文待命。</p>
+              <div class="device-footer"><span class="badge green">在线</span><button class="mini-btn">切换</button></div>
+            </div>
+            <div class="card device-card">
+              <div class="device-icon">🎯</div>
+              <h3>定位传感器</h3>
+              <p>X/Y 偏差满足阈值；稳定时间 12s；数据抖动低。</p>
+              <div class="device-footer"><span class="badge green">稳定</span><button class="mini-btn">校准</button></div>
+            </div>
+            <div class="card device-card">
+              <div class="device-icon">⛔</div>
+              <h3>急停与安全</h3>
+              <p>急停回路闭合；风险区检测无人员/障碍；安全门正常。</p>
+              <div class="device-footer"><span class="badge green">安全</span><button class="mini-btn">复位</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="comm">
+          <div class="page-head">
+            <div>
+              <h2>通信状态</h2>
+              <p>4G、5G、以太网、北斗短报文多链路监测、主备切换、心跳与远程指令回执。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action primary">立即上报</button>
+              <button class="action">重连云平台</button>
+              <button class="action warn">切换链路</button>
+            </div>
+          </div>
+
+          <div class="link-grid">
+            <div class="card link-card">
+              <div class="card-title"><h3>以太网</h3><span class="tag green">主用</span></div>
+              <div class="signal"><i></i><i></i><i></i><i></i></div>
+              <div class="kv"><div class="k">延迟</div><div class="v">42ms</div><div class="k">丢包</div><div class="v">0.1%</div></div>
+            </div>
+            <div class="card link-card">
+              <div class="card-title"><h3>5G</h3><span class="tag green">备用</span></div>
+              <div class="signal"><i></i><i></i><i></i><i style="opacity:.45"></i></div>
+              <div class="kv"><div class="k">RSRP</div><div class="v">-82dBm</div><div class="k">心跳</div><div class="v">正常</div></div>
+            </div>
+            <div class="card link-card">
+              <div class="card-title"><h3>4G</h3><span class="tag yellow">弱信号</span></div>
+              <div class="signal"><i></i><i></i><i style="opacity:.35"></i><i style="opacity:.18"></i></div>
+              <div class="kv"><div class="k">RSRP</div><div class="v">-101dBm</div><div class="k">状态</div><div class="v">可用</div></div>
+            </div>
+            <div class="card link-card">
+              <div class="card-title"><h3>北斗短报文</h3><span class="tag">待命</span></div>
+              <div class="signal"><i></i><i></i><i></i><i style="opacity:.28"></i></div>
+              <div class="kv"><div class="k">模式</div><div class="v">应急备份</div><div class="k">队列</div><div class="v">0 条</div></div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="height:calc(100% - 224px);">
+            <div class="card">
+              <div class="card-title"><h3>通信质量趋势</h3><span class="tag">最近 10 分钟</span></div>
+              <div class="chart">
+                <svg viewBox="0 0 520 185">
+                  <defs>
+                    <linearGradient id="lineFill" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="#5090b8" stop-opacity=".15"/>
+                      <stop offset="100%" stop-color="#5090b8" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M20 150 L80 132 L135 140 L190 96 L245 105 L300 72 L355 82 L410 56 L470 62 L505 44 L505 172 L20 172 Z" fill="url(#lineFill)"/>
+                  <polyline points="20,150 80,132 135,140 190,96 245,105 300,72 355,82 410,56 470,62 505,44" fill="none" stroke="#5090b8" stroke-width="4" stroke-linecap="round"/>
+                  <g stroke="rgba(255,255,255,.06)">
+                    <line x1="20" y1="172" x2="505" y2="172"/>
+                    <line x1="20" y1="122" x2="505" y2="122"/>
+                    <line x1="20" y1="72" x2="505" y2="72"/>
+                    <line x1="20" y1="22" x2="505" y2="22"/>
+                  </g>
+                </svg>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title"><h3>远程指令记录</h3><span class="tag green">鉴权通过</span></div>
+              <table class="table">
+                <thead><tr><th>时间</th><th>来源</th><th>指令</th><th>结果</th></tr></thead>
+                <tbody>
+                  <tr><td>14:08:10</td><td>云平台</td><td>状态上报</td><td><span class="badge green">成功</span></td></tr>
+                  <tr><td>14:07:42</td><td>远程运维</td><td>查看日志</td><td><span class="badge green">成功</span></td></tr>
+                  <tr><td>14:06:31</td><td>云平台</td><td>链路心跳</td><td><span class="badge green">成功</span></td></tr>
+                  <tr><td>14:05:04</td><td>远程运维</td><td>流程暂停</td><td><span class="badge red">拒绝</span></td></tr>
+                  <tr><td>14:04:48</td><td>云平台</td><td>参数读取</td><td><span class="badge green">成功</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="netmon">
+          <div class="page-head">
+            <div>
+              <h2>网络监控</h2>
+              <p>摄像头网络状态监控、连接统计与断线摄像头检测，支持全屏查看。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action">刷新状态</button>
+              <button class="action primary">全部重连</button>
+            </div>
+          </div>
+
+          <div style="height:calc(100% - 68px);">
+            <div class="metric-row" style="margin-bottom:14px;">
+              <div class="metric"><span>监控摄像头总数</span><strong>8</strong></div>
+              <div class="metric"><span>在线连接数</span><strong style="color:var(--green)">6</strong></div>
+              <div class="metric"><span>离线摄像头数</span><strong style="color:var(--red)">2</strong></div>
+            </div>
+
+            <div class="card" style="height:calc(100% - 128px);">
+              <div class="card-title">
+                <h3>摄像头列表</h3>
+                <span class="tag">实时刷新</span>
+              </div>
+              <div class="cam-grid" id="camGrid">
+                <div class="cam-card" data-cam="CAM-01 船坞入口"><div class="cam-preview"><span class="cam-label">CAM-01</span><i class="cam-dot dot"></i></div><div class="cam-info"><b>船坞入口</b><span class="badge green">在线</span></div></div>
+                <div class="cam-card" data-cam="CAM-02 锁紧机构"><div class="cam-preview"><span class="cam-label">CAM-02</span><i class="cam-dot dot"></i></div><div class="cam-info"><b>锁紧机构</b><span class="badge green">在线</span></div></div>
+                <div class="cam-card" data-cam="CAM-03 升降平台"><div class="cam-preview"><span class="cam-label">CAM-03</span><i class="cam-dot dot"></i></div><div class="cam-info"><b>升降平台</b><span class="badge green">在线</span></div></div>
+                <div class="cam-card" data-cam="CAM-04 充电区域"><div class="cam-preview"><span class="cam-label">CAM-04</span><i class="cam-dot dot"></i></div><div class="cam-info"><b>充电区域</b><span class="badge green">在线</span></div></div>
+                <div class="cam-card" data-cam="CAM-05 出坞通道"><div class="cam-preview"><span class="cam-label">CAM-05</span><i class="cam-dot dot"></i></div><div class="cam-info"><b>出坞通道</b><span class="badge green">在线</span></div></div>
+                <div class="cam-card" data-cam="CAM-06 船体全景"><div class="cam-preview"><span class="cam-label">CAM-06</span><i class="cam-dot dot"></i></div><div class="cam-info"><b>船体全景</b><span class="badge green">在线</span></div></div>
+                <div class="cam-card cam-offline" data-cam="CAM-07 配电柜"><div class="cam-preview"><span class="cam-label">CAM-07</span><i class="cam-dot dot red"></i></div><div class="cam-info"><b>配电柜</b><span class="badge red">离线</span></div></div>
+                <div class="cam-card cam-offline" data-cam="CAM-08 水位监测"><div class="cam-preview"><span class="cam-label">CAM-08</span><i class="cam-dot dot red"></i></div><div class="cam-info"><b>水位监测</b><span class="badge red">离线</span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cam-overlay" id="camOverlay">
+            <div class="cam-fullview">
+              <button class="cam-close" id="camClose">×</button>
+              <span class="cam-fullview-label" id="camFullLabel">CAM-01</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="charge">
+          <div class="page-head">
+            <div>
+              <h2>充电数据</h2>
+              <p>电压、电流、功率、SOC、累计充电时长、充电完成状态和历史曲线。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action primary" id="startChargeBtn">启动充电</button>
+              <button class="action danger" id="stopChargeBtn">停止充电</button>
+              <button class="action">充电复位</button>
+            </div>
+          </div>
+
+          <div class="charge-layout">
+            <div class="card">
+              <div class="card-title"><h3>SOC 状态</h3><span class="tag green" id="socStatusTag">充电中</span></div>
+              <div class="gauge-wrap"><div class="gauge"><b>50%</b></div></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><h3>实时电气参数</h3><span class="tag">1s 刷新</span></div>
+              <div class="metric-row">
+                <div class="metric"><span>电压</span><strong id="chargeVoltage">48.0<small>V</small></strong></div>
+                <div class="metric"><span>电流</span><strong id="chargeCurrent">73.5<small>A</small></strong></div>
+                <div class="metric"><span>功率</span><strong id="chargePower">3.5<small>kW</small></strong></div>
+              </div>
+              <div class="bar"><i style="width:50%;"></i></div>
+              <div class="right-bottom-hint" id="chargeHint">累计充电 00:38:21，预计 00:24:00 后达到完成阈值。</div>
+            </div>
+            <div class="card" style="grid-column:span 2;">
+              <div class="card-title"><h3>充电趋势曲线</h3><span class="tag">电压 / 电流 / SOC</span></div>
+              <div class="chart" style="height:272px;">
+                <svg viewBox="0 0 990 250">
+                  <g stroke="rgba(255,255,255,.06)">
+                    <line x1="42" y1="220" x2="965" y2="220"/>
+                    <line x1="42" y1="170" x2="965" y2="170"/>
+                    <line x1="42" y1="120" x2="965" y2="120"/>
+                    <line x1="42" y1="70" x2="965" y2="70"/>
+                    <line x1="42" y1="20" x2="965" y2="20"/>
+                  </g>
+                  <polyline points="42,190 140,176 238,158 336,146 435,128 533,104 631,96 729,78 827,60 965,48" fill="none" stroke="#5090b8" stroke-width="4"/>
+                  <polyline points="42,82 140,80 238,78 336,77 435,75 533,76 631,74 729,75 827,73 965,72" fill="none" stroke="#60a8d0" stroke-width="4"/>
+                  <polyline points="42,142 140,132 238,137 336,126 435,122 533,118 631,120 729,115 827,116 965,112" fill="none" stroke="#c8a848" stroke-width="4"/>
+                  <text x="10" y="86" fill="#60a8d0" font-size="13">电压</text>
+                  <text x="10" y="146" fill="#c8a848" font-size="13">电流</text>
+                  <text x="10" y="194" fill="#5090b8" font-size="13">SOC</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="fault">
+          <div class="page-head">
+            <div>
+              <h2>故障诊断</h2>
+              <p>设备异常、通信异常、流程异常、电气异常的故障码、等级、位置、建议处理与复位。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action primary">执行自诊断</button>
+              <button class="action">确认告警</button>
+              <button class="action warn">故障复位</button>
+            </div>
+          </div>
+
+          <div class="grid-2" style="height:calc(100% - 68px);">
+            <div class="card">
+              <div class="card-title"><h3>当前告警 / 故障</h3><span class="tag yellow">2 条未确认</span></div>
+              <table class="table">
+                <thead><tr><th>等级</th><th>故障码</th><th>名称</th><th>位置</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="badge yellow">一级</span></td><td>COM-101</td><td>4G 信号弱</td><td>通信模块</td><td>未确认</td></tr>
+                  <tr><td><span class="badge yellow">二级</span></td><td>POS-204</td><td>定位数据轻微抖动</td><td>定位传感器</td><td>监控中</td></tr>
+                  <tr><td><span class="badge green">恢复</span></td><td>LFT-301</td><td>升降限位短暂异常</td><td>升降平台</td><td>已恢复</td></tr>
+                  <tr><td><span class="badge green">恢复</span></td><td>CHG-210</td><td>充电握手重试</td><td>充电模块</td><td>已恢复</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card">
+              <div class="card-title"><h3>自诊断结果</h3><span class="tag green">允许复位</span></div>
+              <div class="checklist">
+                <div class="check"><span>锁紧机构检查</span><span class="badge green">通过</span></div>
+                <div class="check"><span>升降机构检查</span><span class="badge green">通过</span></div>
+                <div class="check"><span>充电模块检查</span><span class="badge green">通过</span></div>
+                <div class="check"><span>传感器与限位检查</span><span class="badge yellow">抖动</span></div>
+                <div class="check"><span>通信端口与心跳</span><span class="badge green">通过</span></div>
+                <div class="check"><span>急停回路</span><span class="badge green">通过</span></div>
+              </div>
+              <div class="card-title" style="margin-top:18px;"><h3>建议处理方式</h3><span class="tag">自动生成</span></div>
+              <p style="color:#788898;line-height:1.8;margin:0;font-size:13px;">
+                建议保持以太网主链路，观察 4G 信号强度；若定位抖动持续超过配置阈值，请执行定位传感器校准并检查安装固定状态。当前无三级/四级故障，自动流程可继续。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="ota">
+          <div class="page-head">
+            <div>
+              <h2>固件升级</h2>
+              <p>版本检测、升级包下载、完整性校验、升级执行、状态反馈和失败回滚。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action">检查升级</button>
+              <button class="action primary">下载固件</button>
+              <button class="action warn">执行升级</button>
+              <button class="action">回滚</button>
+            </div>
+          </div>
+
+          <div class="grid-2" style="height:calc(100% - 68px);">
+            <div class="card">
+              <div class="card-title"><h3>版本信息</h3><span class="tag">OTA</span></div>
+              <div class="metric-row">
+                <div class="metric"><span>当前版本</span><strong>V1.2.4</strong></div>
+                <div class="metric"><span>目标版本</span><strong>V1.3.0</strong></div>
+                <div class="metric"><span>升级包</span><strong>86<small>MB</small></strong></div>
+              </div>
+              <div style="margin-top:18px;">
+                <div class="check"><span>空闲/安全状态</span><span class="badge yellow">等待充电完成</span></div>
+                <div class="check"><span>设备编号适配</span><span class="badge green">通过</span></div>
+                <div class="check"><span>存储空间</span><span class="badge green">通过</span></div>
+                <div class="check"><span>完整性校验</span><span class="badge">未开始</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title"><h3>升级状态机</h3><span class="tag yellow">待执行</span></div>
+              <div class="checklist">
+                <div class="check"><span>1. 版本检测</span><span class="badge green">完成</span></div>
+                <div class="check"><span>2. 下载固件</span><span class="badge">待开始</span></div>
+                <div class="check"><span>3. 完整性校验</span><span class="badge">待开始</span></div>
+                <div class="check"><span>4. 停止非必要服务</span><span class="badge">待开始</span></div>
+                <div class="check"><span>5. 写入升级包</span><span class="badge">待开始</span></div>
+                <div class="check"><span>6. 健康检查</span><span class="badge">待开始</span></div>
+                <div class="check"><span>7. 失败回滚</span><span class="badge">预留版本 V1.2.4</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="log">
+          <div class="page-head">
+            <div>
+              <h2>日志记录</h2>
+              <p>操作日志、流程日志、通信日志、故障日志、升级日志与充电日志统一追溯。</p>
+            </div>
+            <div class="page-actions">
+              <button class="action">查询</button>
+              <button class="action">筛选</button>
+              <button class="action primary">导出</button>
+              <button class="action">上报</button>
+            </div>
+          </div>
+
+          <div class="card" style="height:calc(100% - 68px);">
+            <div class="card-title"><h3>日志列表</h3><span class="tag">任务关联：DK-20260520-001</span></div>
+            <table class="table">
+              <thead><tr><th>时间</th><th>类型</th><th>来源</th><th>内容</th><th>结果</th></tr></thead>
+              <tbody>
+                <tr><td>14:10:42</td><td>充电日志</td><td>充电模块</td><td>电压 48.2V，电流 74.1A，SOC 66%</td><td><span class="badge green">记录</span></td></tr>
+                <tr><td>14:10:02</td><td>通信日志</td><td>无人船</td><td>船端心跳确认，状态：充电中</td><td><span class="badge green">成功</span></td></tr>
+                <tr><td>14:09:32</td><td>流程日志</td><td>流程引擎</td><td>阶段变更：升降完成 → 充电中</td><td><span class="badge green">完成</span></td></tr>
+                <tr><td>14:09:28</td><td>操作日志</td><td>系统自动</td><td>闭合充电接触器，充电接口握手完成</td><td><span class="badge green">完成</span></td></tr>
+                <tr><td>14:08:10</td><td>远程指令</td><td>云平台</td><td>立即上报状态，消息 ID：MSG-620401</td><td><span class="badge green">成功</span></td></tr>
+                <tr><td>14:07:05</td><td>故障日志</td><td>通信模块</td><td>4G 信号弱，等级：一级/提示</td><td><span class="badge yellow">告警</span></td></tr>
+                <tr><td>14:06:31</td><td>通信日志</td><td>链路服务</td><td>以太网主链路心跳正常，延迟 42ms</td><td><span class="badge green">成功</span></td></tr>
+                <tr><td>14:05:18</td><td>流程日志</td><td>联锁服务</td><td>充电前置条件校验：锁紧、升降、接口均通过</td><td><span class="badge green">通过</span></td></tr>
+                <tr><td>14:04:48</td><td>操作日志</td><td>现场操作员</td><td>确认告警 COM-101 并保持观察</td><td><span class="badge green">确认</span></td></tr>
+                <tr><td>14:03:22</td><td>升级日志</td><td>OTA 服务</td><td>检测到可升级版本 V1.3.0</td><td><span class="badge">记录</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <aside class="right-panel">
+        <div class="card">
+          <div class="card-title">
+            <h3>实时告警</h3>
+            <span class="tag yellow">2 未确认</span>
+          </div>
+          <div class="alarm-list">
+            <div class="alarm-item">
+              <div class="alarm-level"></div>
+              <div><b>COM-101 4G 信号弱</b><span>一级提示 · 建议检查天线/信号覆盖</span></div>
+            </div>
+            <div class="alarm-item">
+              <div class="alarm-level"></div>
+              <div><b>POS-204 定位数据抖动</b><span>二级一般 · 已启用稳定时间过滤</span></div>
+            </div>
+            <div class="alarm-item">
+              <div class="alarm-level green"></div>
+              <div><b>安全联锁通过</b><span>急停、限位、障碍检测均正常</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <h3>高频控制</h3>
+            <span class="tag">需权限校验</span>
+          </div>
+          <div class="command-grid">
+            <button class="cmd lock">锁紧</button>
+            <button class="cmd">解锁</button>
+            <button class="cmd">升起</button>
+            <button class="cmd">下降</button>
+            <button class="cmd lock">开始充电</button>
+            <button class="cmd warn">停止充电</button>
+            <button class="cmd">链路切换</button>
+            <button class="cmd">状态上报</button>
+            <button class="cmd warn">故障复位</button>
+            <button class="cmd danger">安全停机</button>
+          </div>
+          <div class="right-bottom-hint">远程/高风险指令需通过认证、模式、权限和安全联锁校验；所有操作自动写入日志。</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <h3>系统摘要</h3>
+            <span class="tag green">正常</span>
+          </div>
+          <div class="kv">
+            <div class="k">上报周期</div><div class="v">30 秒，可配置 5-300 秒</div>
+            <div class="k">最后上报</div><div class="v">2026-05-20 14:10:42</div>
+            <div class="k">本地版本</div><div class="v">HMI V1.2.4 / 控制器 V1.2.4</div>
+            <div class="k">运行时长</div><div class="v">128 小时 24 分</div>
+            <div class="k">日志容量</div><div class="v">68% 已用，自动轮转开启</div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="modal" id="modal">
+      <div class="modal-box">
+        <h3>应急停机</h3>
+        <p>应急停机会切断危险输出、冻结软件状态、终止自动/远程控制并上报告警。此处为 UI 原型提示。</p>
+        <div class="modal-actions">
+          <button class="action danger" id="confirmStop">确认停机</button>
+          <button class="action" id="cancelStop">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const navButtons = document.querySelectorAll(".nav-btn");
+    const pages = document.querySelectorAll(".page");
+
+    navButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        navButtons.forEach(item => item.classList.remove("active"));
+        pages.forEach(page => page.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.page).classList.add("active");
+      });
+    });
+
+    const modeButtons = document.querySelectorAll(".mode-btn");
+    let pendingModeBtn = null;
+
+    // 创建模式切换确认弹窗
+    const modeModal = document.createElement("div");
+    modeModal.className = "modal";
+    modeModal.innerHTML = `
+      <div class="modal-box" style="border-color:rgba(80,100,140,.35);background:linear-gradient(180deg, rgba(14,14,20,.97), rgba(8,8,14,.97));box-shadow:0 30px 80px rgba(0,0,0,.80),0 0 20px rgba(80,100,140,.08);">
+        <h3 id="modeModalTitle" style="color:#d0d4dc;">切换控制模式</h3>
+        <p id="modeModalDesc">确认将控制模式切换为 <b id="modeModalTarget"></b>？</p>
+        <div class="modal-actions">
+          <button class="action primary" id="confirmMode">确认切换</button>
+          <button class="action" id="cancelMode">取消</button>
+        </div>
+      </div>`;
+    document.getElementById("screen").appendChild(modeModal);
+
+    modeButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (btn.classList.contains("active")) return;
+        pendingModeBtn = btn;
+        document.getElementById("modeModalTarget").textContent = btn.textContent;
+        modeModal.classList.add("show");
+      });
+    });
+
+    document.getElementById("confirmMode").addEventListener("click", () => {
+      if (pendingModeBtn) {
+        modeButtons.forEach(item => item.classList.remove("active"));
+        pendingModeBtn.classList.add("active");
+        pendingModeBtn = null;
+      }
+      modeModal.classList.remove("show");
+    });
+
+    document.getElementById("cancelMode").addEventListener("click", () => {
+      pendingModeBtn = null;
+      modeModal.classList.remove("show");
+    });
+
+    modeModal.addEventListener("click", (e) => {
+      if (e.target === modeModal) {
+        pendingModeBtn = null;
+        modeModal.classList.remove("show");
+      }
+    });
+
+    const modal = document.getElementById("modal");
+    document.getElementById("emergencyBtn").addEventListener("click", () => {
+      modal.classList.add("show");
+    });
+    document.getElementById("cancelStop").addEventListener("click", () => {
+      modal.classList.remove("show");
+    });
+    document.getElementById("confirmStop").addEventListener("click", () => {
+      document.getElementById("sysStatusDot").className = "dot red";
+      document.getElementById("sysStatusText").textContent = "安全停机";
+      document.getElementById("startSysBtn").style.display = "block";
+      modal.classList.remove("show");
+    });
+
+    document.getElementById("startSysBtn").addEventListener("click", () => {
+      const btn = document.getElementById("startSysBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>启动中';
+      btn.style.opacity = '.7';
+      btn.style.cursor = 'default';
+      document.getElementById("sysStatusDot").className = "dot yellow";
+      document.getElementById("sysStatusText").textContent = "启动中";
+      setTimeout(() => {
+        document.getElementById("sysStatusDot").className = "dot";
+        document.getElementById("sysStatusText").textContent = "运行正常";
+        btn.style.display = "none";
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+        btn.textContent = '启动系统';
+      }, 3000);
+    });
+
+    // 网络监控 - 摄像头全屏查看
+    const camGrid = document.getElementById("camGrid");
+    const camOverlay = document.getElementById("camOverlay");
+    const camClose = document.getElementById("camClose");
+    const camFullLabel = document.getElementById("camFullLabel");
+
+    if (camGrid) {
+      camGrid.addEventListener("click", (e) => {
+        const card = e.target.closest(".cam-card");
+        if (!card) return;
+        if (card.classList.contains("cam-offline")) return;
+        const camName = card.dataset.cam || "";
+        camFullLabel.textContent = camName;
+        camOverlay.classList.add("show");
+      });
+    }
+
+    if (camClose) {
+      camClose.addEventListener("click", (e) => {
+        e.stopPropagation();
+        camOverlay.classList.remove("show");
+      });
+    }
+
+    if (camOverlay) {
+      camOverlay.addEventListener("click", (e) => {
+        if (e.target === camOverlay) {
+          camOverlay.classList.remove("show");
+        }
+      });
+    }
+
+    // 充电状态切换
+    const socStatusTag = document.getElementById("socStatusTag");
+    const startChargeBtn = document.getElementById("startChargeBtn");
+    const stopChargeBtn = document.getElementById("stopChargeBtn");
+
+    var remainSeconds = 1440;
+    var totalChargedSeconds = 2301;
+    var savedRemainSeconds = remainSeconds;
+    var savedTotalChargedSeconds = totalChargedSeconds;
+
+    function formatTime(s) {
+      var h = Math.floor(s / 3600);
+      var m = Math.floor((s % 3600) / 60);
+      var sec = s % 60;
+      return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m) + ":" + (sec < 10 ? "0" + sec : sec);
+    }
+
+    function updateChargeHint() {
+      document.getElementById("chargeHint").textContent =
+        "累计充电 " + formatTime(totalChargedSeconds) + "，预计 " + formatTime(remainSeconds) + " 后达到完成阈值。";
+    }
+
+    if (stopChargeBtn) {
+      stopChargeBtn.addEventListener("click", () => {
+        socStatusTag.textContent = "停止充电";
+        socStatusTag.className = "tag yellow";
+        document.getElementById("chargeVoltage").innerHTML = "0.0<small>V</small>";
+        document.getElementById("chargeCurrent").innerHTML = "0.0<small>A</small>";
+        document.getElementById("chargePower").innerHTML = "0.0<small>kW</small>";
+        savedRemainSeconds = remainSeconds;
+        savedTotalChargedSeconds = totalChargedSeconds;
+        document.getElementById("chargeHint").textContent = "累计充电 " + formatTime(totalChargedSeconds) + "，预计 00:00:00 后达到完成阈值。";
+      });
+    }
+
+    if (startChargeBtn) {
+      startChargeBtn.addEventListener("click", () => {
+        socStatusTag.textContent = "充电中";
+        socStatusTag.className = "tag green";
+        remainSeconds = savedRemainSeconds;
+        totalChargedSeconds = savedTotalChargedSeconds;
+        updateChargeHint();
+      });
+    }
+
+    function randomFloat(min, max) {
+      return (Math.random() * (max - min) + min).toFixed(1);
+    }
+
+    setInterval(() => {
+      if (socStatusTag.textContent === "充电中") {
+        var v = randomFloat(47.5, 48.5);
+        var a = randomFloat(72.0, 75.1);
+        var w = (parseFloat(v) * parseFloat(a) / 1000).toFixed(1);
+        document.getElementById("chargeVoltage").innerHTML = v + "<small>V</small>";
+        document.getElementById("chargeCurrent").innerHTML = a + "<small>A</small>";
+        document.getElementById("chargePower").innerHTML = w + "<small>kW</small>";
+        if (remainSeconds > 0) {
+          remainSeconds--;
+          totalChargedSeconds++;
+          updateChargeHint();
+        }
+      } else {
+        document.getElementById("chargeVoltage").innerHTML = "0.0<small>V</small>";
+        document.getElementById("chargeCurrent").innerHTML = "0.0<small>A</small>";
+        document.getElementById("chargePower").innerHTML = "0.0<small>kW</small>";
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
