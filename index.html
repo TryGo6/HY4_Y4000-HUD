@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=1600, height=900, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>无人船智能船坞控制系统 HMI</title>
+  <script src="https://cdn.bootcdn.net/ajax/libs/flv.js/1.6.2/flv.min.js"></script>
   <style>
     :root {
       --screen-w: 1600px;
@@ -1339,6 +1340,15 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
       place-items: center;
     }
 
+    .cam-preview .cam-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+    }
+
     .cam-preview .cam-crosshair {
       width: 64px;
       height: 40px;
@@ -1923,8 +1933,8 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
           <div style="height:calc(100% - 68px);">
             <div class="metric-row" style="margin-bottom:14px;">
               <div class="metric"><span>监控摄像头总数</span><strong>3</strong></div>
-              <div class="metric"><span>在线连接数</span><strong style="color:var(--green)">0</strong></div>
-              <div class="metric"><span>离线摄像头数</span><strong style="color:var(--red)">3</strong></div>
+              <div class="metric"><span>在线连接数</span><strong style="color:var(--green)" id="camOnlineCount">1</strong></div>
+              <div class="metric"><span>离线摄像头数</span><strong style="color:var(--red)" id="camOfflineCount">2</strong></div>
             </div>
 
             <div class="card" style="height:calc(100% - 128px);">
@@ -1933,7 +1943,7 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
                 <span class="tag">实时刷新</span>
               </div>
               <div class="cam-grid" id="camGrid">
-                <div class="cam-card cam-offline" data-cam="CAM-01 船坞入口"><div class="cam-preview"><span class="cam-label">CAM-01</span><i class="cam-dot dot red"></i></div><div class="cam-info"><b>船坞入口</b><span class="badge red">离线</span></div></div>
+                <div class="cam-card" data-cam="CAM-01 船坞入口"><div class="cam-preview"><video id="cam01Preview" class="cam-video" muted autoplay playsinline></video><span class="cam-label">CAM-01</span><i class="cam-dot dot green" id="cam01Dot"></i></div><div class="cam-info"><b>船坞入口</b><span class="badge green" id="cam01Badge">在线</span></div></div>
                 <div class="cam-card cam-offline" data-cam="CAM-02 锁紧机构"><div class="cam-preview"><span class="cam-label">CAM-02</span><i class="cam-dot dot red"></i></div><div class="cam-info"><b>锁紧机构</b><span class="badge red">离线</span></div></div>
                 <div class="cam-card cam-offline" data-cam="CAM-03 升降平台"><div class="cam-preview"><span class="cam-label">CAM-03</span><i class="cam-dot dot red"></i></div><div class="cam-info"><b>升降平台</b><span class="badge red">离线</span></div></div>
               </div>
@@ -1942,6 +1952,7 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
 
           <div class="cam-overlay" id="camOverlay">
             <div class="cam-fullview">
+              <video id="cam01Full" class="cam-video" muted autoplay playsinline style="border-radius:18px;"></video>
               <button class="cam-close" id="camClose">×</button>
               <span class="cam-fullview-label" id="camFullLabel">CAM-01</span>
             </div>
@@ -2385,6 +2396,63 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
         document.getElementById("chargePower").innerHTML = "0.0<small>kW</small>";
       }
     }, 1000);
+
+    // === CAM-01 FLV 实时视频 ===
+    function initCam01Video(videoId) {
+      var video = document.getElementById(videoId);
+      if (!video) return;
+      if (flvjs.isSupported()) {
+        var player = flvjs.createPlayer({
+          type: 'flv',
+          isLive: true,
+          url: 'http://localhost:8000/live/stream.flv'
+        });
+        player.attachMediaElement(video);
+        player.load();
+        player.play();
+        player.on(flvjs.Events.ERROR, function() {
+          document.getElementById('cam01Dot').className = 'cam-dot dot red';
+          document.getElementById('cam01Badge').textContent = '离线';
+          document.getElementById('cam01Badge').className = 'badge red';
+        });
+        player.on(flvjs.Events.LOADING_COMPLETE, function() {
+          document.getElementById('cam01Dot').className = 'cam-dot dot green';
+          document.getElementById('cam01Badge').textContent = '在线';
+          document.getElementById('cam01Badge').className = 'badge green';
+        });
+        return player;
+      } else {
+        document.getElementById('cam01Dot').className = 'cam-dot dot red';
+        document.getElementById('cam01Badge').textContent = '不支持';
+        document.getElementById('cam01Badge').className = 'badge red';
+      }
+      return null;
+    }
+
+    var cam01PreviewPlayer = initCam01Video('cam01Preview');
+    var cam01FullPlayer = null;
+
+    // 点击 CAM-01 卡片打开全屏时，初始化全屏视频
+    document.querySelector('[data-cam="CAM-01 船坞入口"]').addEventListener('click', function() {
+      if (!cam01FullPlayer) {
+        cam01FullPlayer = initCam01Video('cam01Full');
+      } else {
+        // 如果已存在则重新播放
+        cam01FullPlayer.play();
+      }
+    });
+
+    // 关闭全屏时暂停全屏视频以节省资源
+    document.getElementById('camClose').addEventListener('click', function() {
+      if (cam01FullPlayer) {
+        cam01FullPlayer.pause();
+      }
+    });
+    document.getElementById('camOverlay').addEventListener('click', function(e) {
+      if (e.target === document.getElementById('camOverlay') && cam01FullPlayer) {
+        cam01FullPlayer.pause();
+      }
+    });
   </script>
 </body>
 </html>
