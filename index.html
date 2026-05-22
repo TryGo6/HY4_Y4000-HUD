@@ -1933,8 +1933,8 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
           <div style="height:calc(100% - 68px);">
             <div class="metric-row" style="margin-bottom:14px;">
               <div class="metric"><span>监控摄像头总数</span><strong>3</strong></div>
-              <div class="metric"><span>在线连接数</span><strong style="color:var(--green)" id="camOnlineCount">1</strong></div>
-              <div class="metric"><span>离线摄像头数</span><strong style="color:var(--red)" id="camOfflineCount">2</strong></div>
+<div class="metric"><span>在线连接数</span><strong style="color:var(--green)" id="camOnlineCount">0</strong></div>
+<div class="metric"><span>离线摄像头数</span><strong style="color:var(--red)" id="camOfflineCount">3</strong></div>
             </div>
 
             <div class="card" style="height:calc(100% - 128px);">
@@ -1943,7 +1943,7 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
                 <span class="tag">实时刷新</span>
               </div>
               <div class="cam-grid" id="camGrid">
-                <div class="cam-card" data-cam="CAM-01 船坞入口"><div class="cam-preview"><video id="cam01Preview" class="cam-video" muted autoplay playsinline></video><span class="cam-label">CAM-01</span><i class="cam-dot dot green" id="cam01Dot"></i></div><div class="cam-info"><b>船坞入口</b><span class="badge green" id="cam01Badge">在线</span></div></div>
+<div class="cam-card" data-cam="CAM-01 船坞入口"><div class="cam-preview"><video id="cam01Preview" class="cam-video" muted autoplay playsinline></video><span class="cam-label">CAM-01</span><i class="cam-dot dot yellow" id="cam01Dot"></i></div><div class="cam-info"><b>船坞入口</b><span class="badge yellow" id="cam01Badge">连接中</span></div></div>
                 <div class="cam-card cam-offline" data-cam="CAM-02 锁紧机构"><div class="cam-preview"><span class="cam-label">CAM-02</span><i class="cam-dot dot red"></i></div><div class="cam-info"><b>锁紧机构</b><span class="badge red">离线</span></div></div>
                 <div class="cam-card cam-offline" data-cam="CAM-03 升降平台"><div class="cam-preview"><span class="cam-label">CAM-03</span><i class="cam-dot dot red"></i></div><div class="cam-info"><b>升降平台</b><span class="badge red">离线</span></div></div>
               </div>
@@ -2414,15 +2414,19 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
         player.attachMediaElement(video);
         player.load();
         player.play();
+        // flv.js ERROR → 离线
         player.on(flvjs.Events.ERROR, function() {
           document.getElementById('cam01Dot').className = 'cam-dot dot red';
           document.getElementById('cam01Badge').textContent = '离线';
           document.getElementById('cam01Badge').className = 'badge red';
+          refreshCamStats();
         });
-        player.on(flvjs.Events.LOADING_COMPLETE, function() {
+        // HTML5 video playing → 真正开始播放了 → 在线
+        video.addEventListener('playing', function() {
           document.getElementById('cam01Dot').className = 'cam-dot dot green';
           document.getElementById('cam01Badge').textContent = '在线';
           document.getElementById('cam01Badge').className = 'badge green';
+          refreshCamStats();
         });
         return player;
       } else {
@@ -2437,6 +2441,18 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
       if (cam01Initialized) return;
       cam01Initialized = true;
       cam01PreviewPlayer = initCam01Video('cam01Preview');
+    }
+
+    function refreshCamStats() {
+      var badges = document.querySelectorAll('#camGrid .badge');
+      var online = 0, offline = 0;
+      badges.forEach(function(b) {
+        var t = b.textContent.trim();
+        if (t === '在线') online++;
+        else if (t === '离线' || t === '不支持') offline++;
+      });
+      document.getElementById('camOnlineCount').textContent = online;
+      document.getElementById('camOfflineCount').textContent = offline;
     }
 
     // 点击"视频监控"导航按钮时，懒加载 CAM-01 视频
