@@ -2397,10 +2397,14 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
       }
     }, 1000);
 
-    // === CAM-01 FLV 实时视频 ===
+    // === CAM-01 FLV 实时视频（懒加载） ===
+    var cam01Initialized = false;
+    var cam01PreviewPlayer = null;
+    var cam01FullPlayer = null;
+
     function initCam01Video(videoId) {
       var video = document.getElementById(videoId);
-      if (!video) return;
+      if (!video) return null;
       if (flvjs.isSupported()) {
         var player = flvjs.createPlayer({
           type: 'flv',
@@ -2429,15 +2433,23 @@ conic-gradient(var(--green) 0 50%, rgba(255,255,255,.04) 50% 100%);
       return null;
     }
 
-    var cam01PreviewPlayer = initCam01Video('cam01Preview');
-    var cam01FullPlayer = null;
+    function initCam01IfNeeded() {
+      if (cam01Initialized) return;
+      cam01Initialized = true;
+      cam01PreviewPlayer = initCam01Video('cam01Preview');
+    }
 
-    // 点击 CAM-01 卡片打开全屏时，初始化全屏视频
+    // 点击"视频监控"导航按钮时，懒加载 CAM-01 视频
+    document.querySelector('.nav-btn[data-page="netmon"]').addEventListener('click', function() {
+      initCam01IfNeeded();
+    });
+
+    // 点击 CAM-01 卡片打开全屏时，确保已初始化并初始化全屏视频
     document.querySelector('[data-cam="CAM-01 船坞入口"]').addEventListener('click', function() {
+      initCam01IfNeeded();
       if (!cam01FullPlayer) {
         cam01FullPlayer = initCam01Video('cam01Full');
       } else {
-        // 如果已存在则重新播放
         cam01FullPlayer.play();
       }
     });
